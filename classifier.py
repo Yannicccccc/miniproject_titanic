@@ -1,27 +1,36 @@
+import pandas as pd
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
-from sklearn.naive_bayes import GaussianNB, MultinomialNB
+from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, GradientBoostingClassifier, BaggingClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression, RidgeClassifier
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from data_cleaning import load_data
+from data_visualization import prediction_eval
+import argparse
 
-classifier_list = ['MNB', 'GNB', 'KNN', 'SVM', 'DT', 'ET', 'GB', 'RF', 'BC', 'LR', 'RC']
+
+
+parser = argparse.ArgumentParser(description='EE4483 mini project')
+parser.add_argument('--classifier', type=str, required=True, help='choose a model: ')
+args = parser.parse_args()
+
+
+
+classifier_list = ['GNB', 'KNN', 'SVM', 'DT', 'ET', 'GB', 'RF', 'BC', 'LR', 'RC']
 cross_validation = 3
 num_jobs = 2
 random_state = 0
 
 def classify(type):
-    train_vectors, test_vectors, train_labels, test_labels = load_data()
+    train_vectors, test_vectors, train_labels, test_labels = load_data('train')
+    gold_vectors = load_data('test')
 
     classifier = None
-    if (type == 'MNB'):
-        classifier = MultinomialNB(alpha=0.1)
-        classifier.fit(train_vectors, train_labels)
-    elif (type == 'GNB'):
+    if (type == 'GNB'):
         classifier = GaussianNB()
         classifier.fit(train_vectors, train_labels)
     elif (type == 'KNN'):
@@ -37,26 +46,26 @@ def classify(type):
         classifier.fit(train_vectors, train_labels)
         classifier = classifier.best_estimator_
     elif (type == 'DT'):
-        classifier = DecisionTreeClassifier(max_depth=20, min_samples_split=2, random_state=random_state)
-        params = {'criterion': ['gini', 'entropy']}
+        classifier = DecisionTreeClassifier(min_samples_split=2, random_state=random_state)
+        params = {'criterion': ['gini', 'entropy'], 'max_depth': [2, 4, 10, 50]}
         classifier = GridSearchCV(classifier, params, cv=cross_validation, n_jobs=num_jobs)
         classifier.fit(train_vectors, train_labels)
         classifier = classifier.best_estimator_
     elif (type == 'ET'):
-        classifier = ExtraTreesClassifier(max_depth=20, min_samples_split=2, random_state=random_state)
-        params = {'criterion': ['gini', 'entropy']}
+        classifier = ExtraTreesClassifier(min_samples_split=2, random_state=random_state)
+        params = {'criterion': ['gini', 'entropy'], 'max_depth': [2, 4, 10, 50]}
         classifier = GridSearchCV(classifier, params, cv=cross_validation, n_jobs=num_jobs)
         classifier.fit(train_vectors, train_labels)
         classifier = classifier.best_estimator_
     elif (type == 'GB'):
-        classifier = GradientBoostingClassifier(max_depth=20, min_samples_split=2, random_state=random_state)
-        params = {'criterion': ['friedman_mse', 'mse', 'mae']}
+        classifier = GradientBoostingClassifier(min_samples_split=2, random_state=random_state)
+        params = {'criterion': ['friedman_mse', 'mse', 'mae'], 'max_depth': [2, 4, 10, 50]}
         classifier = GridSearchCV(classifier, params, cv=cross_validation, n_jobs=num_jobs)
         classifier.fit(train_vectors, train_labels)
         classifier = classifier.best_estimator_
     elif (type == 'RF'):
-        classifier = RandomForestClassifier(max_depth=20, min_samples_split=2, random_state=random_state)
-        params = {'n_estimators': [n for n in range(5, 50, 5)], 'criterion': ['gini', 'entropy']}
+        classifier = RandomForestClassifier(min_samples_split=2, random_state=random_state)
+        params = {'n_estimators': [n for n in range(5, 50, 5)], 'criterion': ['gini', 'entropy'], 'max_depth': [2, 4, 10, 50]}
         classifier = GridSearchCV(classifier, params, cv=cross_validation, n_jobs=num_jobs)
         classifier.fit(train_vectors, train_labels)
         classifier = classifier.best_estimator_
@@ -79,6 +88,7 @@ def classify(type):
         print("Classifier Type Not Included In This Project!")
         return
 
+    # print(classifier)
     accuracy = accuracy_score(train_labels, classifier.predict(train_vectors))
     print("Training Accuracy:", accuracy)
     test_predictions = classifier.predict(test_vectors)
@@ -87,6 +97,23 @@ def classify(type):
     print("Confusion Matrix:", )
     print(confusion_matrix(test_labels, test_predictions))
 
+    gold_prediction = classifier.predict(gold_vectors)
+    df_prediction = pd.read_csv('data/titanic/test.csv', header=0)
+    df_prediction['Survived'] = gold_prediction
+
+    df_submission = pd.read_csv('data/titanic/submission.csv', header=0)
+    df_submission.Survived = df_prediction['Survived']
+    df_submission.set_index(['PassengerId'], inplace=True)
+    # print(df_prediction, df_submission)
+    # print(gold_vectors, gold_prediction)
+    # print(df_prediction.shape)
+    df_prediction.to_csv("data/titanic/prediction.csv")
+    df_submission.to_csv("data/titanic/submission_test.csv")
+
+    prediction_eval()
+
+
+
 def test_all():
     for i in range(len(classifier_list)):
         print('\n')
@@ -94,4 +121,6 @@ def test_all():
         classify(classifier_list[i])
 
 
-test_all()
+
+if args.classifier == 'ALL': test_all()
+else: classify(args.classifier)
