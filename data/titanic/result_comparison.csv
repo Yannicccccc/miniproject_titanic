@@ -1,0 +1,11 @@
+﻿,survivor,female,eighteen,family,class,port
+GNB,131,100,11,54,3,Queenstown
+KNN,76,48,4,30,3,Queenstown
+SVM,67,35,4,24,3,Queenstown
+DT,166,141,18,78,2,Queenstown
+ET,136,136,12,68,2,Queenstown
+GB,116,97,21,47,3,Queenstown
+RF,121,102,19,44,3,Queenstown
+BC,107,97,17,39,3,Queenstown
+LR,149,141,18,73,2,Queenstown
+RC,151,149,17,69,2,Queenstown
